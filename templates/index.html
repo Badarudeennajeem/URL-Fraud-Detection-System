@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Fraud Detection - Scam Website Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.6s ease-out;
+            position: relative;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header h1 {
+            color: #1a1a1a;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease-out 0.2s both;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.1);
+        }
+        
+        input[type="text"]:hover {
+            border-color: #555;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #333333 0%, #1a1a1a 100%);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            display: none;
+            border: 1px solid #b1dfbb;
+            animation: slideInLeft 0.4s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1a1a1a;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f8f8f8 0%, #ffffff 100%);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .result.show {
+            display: block;
+            animation: slideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .fraud-score {
+            text-align: center;
+            margin-bottom: 25px;
+            animation: fadeInDown 0.6s ease-out 0.1s both;
+        }
+        
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 15px;
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .score-circle.safe {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .score-circle.moderate {
+            background: linear-gradient(135deg, #f39c12 0%, #ff6b6b 100%);
+        }
+        
+        .score-circle.suspicious {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .risk-level {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .url-display {
+            background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+            padding: 12px;
+            border-radius: 6px;
+            word-break: break-all;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 20px;
+            border-left: 4px solid #1a1a1a;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            animation: slideInLeft 0.5s ease-out 0.3s both;
+        }
+        
+        .details-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            animation: fadeIn 0.5s ease-out 0.4s both;
+        }
+        
+        .detail-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #ddd;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            animation: slideInLeft 0.5s ease-out both;
+        }
+        
+        .detail-item:nth-child(1) { animation-delay: 0.5s; }
+        .detail-item:nth-child(2) { animation-delay: 0.6s; }
+        .detail-item:nth-child(3) { animation-delay: 0.7s; }
+        .detail-item:nth-child(4) { animation-delay: 0.8s; }
+        .detail-item:nth-child(5) { animation-delay: 0.9s; }
+        .detail-item:nth-child(6) { animation-delay: 1s; }
+        
+        .detail-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(4px);
+        }
+        
+        .detail-item.warning {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #fffbf0 0%, #fffaf5 100%);
+        }
+        
+        .detail-item.danger {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #ffe8e8 0%, #fff5f5 100%);
+        }
+        
+        .detail-check {
+            flex: 1;
+        }
+        
+        .detail-check-name {
+            font-weight: 700;
+            color: #1a1a1a;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        
+        .detail-check-message {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .detail-score {
+            background: linear-gradient(135deg, #e8e8e8 0%, #f0f0f0 100%);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            font-size: 13px;
+            min-width: 50px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 15px;
+            background: linear-gradient(135deg, #fadbd8 0%, #f5c6cb 100%);
+            border: 1px solid #f1b0b7;
+            border-radius: 8px;
+            display: none;
+            animation: slideInLeft 0.4s ease-out;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #f0f0f0 0%, #f8f8f8 100%);
+            border-left: 4px solid #1a1a1a;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #333;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            animation: fadeIn 1s ease-out 1.2s both;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ URL Fraud Detection</h1>
+            <p>Check if a website is likely to be a scam or fraudulent</p>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="urlInput" 
+                    placeholder="Enter URL (e.g., example.com or https://example.com)"
+                    autocomplete="off"
+                >
+                <button onclick="checkURL()">Check</button>
+            </div>
+        </div>
+        
+        <div class="error" id="errorMessage"></div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #ffffff;">Analyzing URL...</p>
+        </div>
+        
+        <div class="result" id="result">
+            <div class="fraud-score">
+                <div class="score-circle" id="scoreCircle">%</div>
+                <div class="risk-level" id="riskLevel"></div>
+            </div>
+            
+            <div class="url-display" id="urlDisplay"></div>
+            
+            <div class="details-title">Detailed Analysis</div>
+            <div id="detailsContainer"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="addToBlacklist()" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); flex: 1;">
+                    ⛔ Add to Blacklist
+                </button>
+                <button onclick="resetForm()" style="background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); flex: 1;">
+                    🔄 Check Another
+                </button>
+            </div>
+            
+            <div class="info-box">
+                <strong>⚠️ Note:</strong> This tool provides a risk assessment based on common fraud indicators. Always exercise caution and verify from official sources before clicking suspicious links or entering personal information.
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkURL();
+            }
+        });
+        
+        function checkURL() {
+            const url = document.getElementById('urlInput').value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            errorDiv.classList.remove('show');
+            
+            if (!url) {
+                errorDiv.textContent = '⚠️ Please enter a URL';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            loading.style.display = 'block';
+            result.classList.remove('show');
+            
+            fetch('/check', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: url })
+            })
+            .then(response => {
+                loading.style.display = 'none';
+                if (!response.ok) {
+                    throw new Error('Failed to check URL');
+                }
+                return response.json();
+            })
+            .then(data => {
+                displayResult(data);
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                errorDiv.textContent = '❌ Error: ' + error.message;
+                errorDiv.classList.add('show');
+            });
+        }
+        
+        function displayResult(data) {
+            const result = document.getElementById('result');
+            const scoreCircle = document.getElementById('scoreCircle');
+            const riskLevel = document.getElementById('riskLevel');
+            const urlDisplay = document.getElementById('urlDisplay');
+            const detailsContainer = document.getElementById('detailsContainer');
+            
+            // Store current URL for blacklist action
+            window.currentCheckedURL = data.url;
+            
+            // Update score circle
+            scoreCircle.textContent = data.fraud_percentage + '%';
+            scoreCircle.className = 'score-circle';
+            
+            if (data.fraud_percentage >= 70) {
+                scoreCircle.classList.add('suspicious');
+            } else if (data.fraud_percentage >= 30) {
+                scoreCircle.classList.add('moderate');
+            } else {
+                scoreCircle.classList.add('safe');
+            }
+            
+            // Update risk level and URL
+            riskLevel.textContent = data.risk_level;
+            urlDisplay.textContent = '🔗 ' + data.url;
+            
+            // Display details
+            detailsContainer.innerHTML = '';
+            data.details.forEach(detail => {
+                const detailItem = document.createElement('div');
+                detailItem.className = 'detail-item';
+                
+                if (detail.score >= 25) {
+                    detailItem.classList.add('danger');
+                } else if (detail.score > 0) {
+                    detailItem.classList.add('warning');
+                }
+                
+                detailItem.innerHTML = `
+                    <div class="detail-check">
+                        <div class="detail-check-name">${detail.check}</div>
+                        <div class="detail-check-message">${detail.message}</div>
+                    </div>
+                    <div class="detail-score">+${detail.score}</div>
+                `;
+                
+                detailsContainer.appendChild(detailItem);
+            });
+            
+            result.classList.add('show');
+        }
+        
+        function addToBlacklist() {
+            if (!window.currentCheckedURL) {
+                alert('Please check a URL first');
+                return;
+            }
+            
+            const confirmAdd = confirm(`Add "${window.currentCheckedURL}" to blacklist?`);
+            if (!confirmAdd) return;
+            
+            fetch('/add-to-blacklist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: window.currentCheckedURL })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'success-message show';
+                    successDiv.textContent = '✅ ' + data.message;
+                    document.getElementById('result').insertBefore(successDiv, document.getElementById('result').firstChild);
+                    
+                    setTimeout(() => {
+                        successDiv.remove();
+                    }, 3000);
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to add to blacklist'));
+                }
+            })
+            .catch(error => {
+                alert('❌ Error: ' + error.message);
+            });
+        }
+        
+        function resetForm() {
+            document.getElementById('urlInput').value = '';
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('errorMessage').classList.remove('show');
+            document.getElementById('urlInput').focus();
+        }
+    </script>
+</body>
+</html>

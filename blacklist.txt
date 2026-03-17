@@ -1,0 +1,8 @@
+http://malicious-site.com
+https://phishing-example.com
+http://fake-paypal.net
+https://amazon-phishing.xyz
+http://bank-scam.info
+https://crypto-scam-wallet.com
+http://confirm-identity-now.web
+https://urgent-verify-account.net
